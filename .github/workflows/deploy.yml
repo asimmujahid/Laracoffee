@@ -31,6 +31,8 @@ jobs:
             # Install dependencies
             sudo composer install --no-dev --prefer-dist --optimize-autoloader
 
+            sudo npm install
+
             # Run migrations
             sudo php artisan migrate --force
             php artisan storage:link
