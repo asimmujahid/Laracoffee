@@ -30,6 +30,7 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_KEY }}
           script: |
+            sudo su www-data -s /bin/bash
             cd /var/www/Laracoffee
             git pull origin master
             composer install --no-dev --prefer-dist --optimize-autoloader
