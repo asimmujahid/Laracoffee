@@ -3,7 +3,7 @@ name: Deploy Laravel to EC2
 on:
   push:
     branches:
-      - master   # run pipeline on push to main branch
+      - master   # run pipeline on push to master branch
 
 jobs:
   deploy:
@@ -13,16 +13,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.2'
-          extensions: mbstring, xml, curl, zip, mysql, bcmath, gd
-          tools: composer
-
-      - name: Install Dependencies
-        run: composer install --no-dev --prefer-dist --optimize-autoloader
-
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@master
         with:
@@ -30,14 +20,29 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_KEY }}
           script: |
-            sudo su www-data -s /bin/bash
             cd /var/www/Laracoffee
-            git pull origin master
-            composer install --no-dev --prefer-dist --optimize-autoloader
-            php artisan migrate --force
+
+            # Make sure git allows this directory
+            sudo git config --global --add safe.directory /var/www/Laracoffee
+
+            # Pull latest code
+            sudo git pull origin master
+
+            # Install dependencies
+            sudo composer install --no-dev --prefer-dist --optimize-autoloader
+
+            # Run migrations
+            sudo php artisan migrate --force
+
+            # Fix permissions
             sudo chown -R www-data:www-data /var/www/Laracoffee
             sudo chmod -R 775 /var/www/Laracoffee/storage /var/www/Laracoffee/bootstrap/cache
-            php artisan config:cache
-            php artisan route:cache
-            php artisan view:cache
+
+            # Rebuild Laravel caches
+            sudo -u www-data php artisan config:cache
+            sudo -u www-data php artisan route:cache
+            sudo -u www-data php artisan view:cache
+
+            # Restart services
+            sudo systemctl restart php8.3-fpm
             sudo systemctl reload nginx
